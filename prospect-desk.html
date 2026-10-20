@@ -1,0 +1,988 @@
+<title>Prospect Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky top bar with tabs over one working column (max 1080px); a prospect opens as a right-hand sheet, full-screen on phones */
+:root {
+  --bg: #f3f6f7;
+  --surface: #ffffff;
+  --sunk: #e8eef0;
+  --ink: #14232b;
+  --muted: #586a72;
+  --line: #d6dfe2;
+  --accent: #0d6b66;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefec;
+  --due: #a54d08;
+  --due-soft: #fbecd9;
+  --good: #2b7430;
+  --good-soft: #e0f1e1;
+  --bad: #9c3636;
+  --bad-soft: #f5e1e1;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1518; --surface: #152126; --sunk: #1b2a30; --ink: #e2ebed; --muted: #92a4ab; --line: #26373d;
+    --accent: #52c2b7; --accent-ink: #052220; --accent-soft: #163b38;
+    --due: #f2a65e; --due-soft: #3a2914; --good: #7fc983; --good-soft: #1b3420; --bad: #e88d8d; --bad-soft: #3b1f20;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1518; --surface: #152126; --sunk: #1b2a30; --ink: #e2ebed; --muted: #92a4ab; --line: #26373d;
+  --accent: #52c2b7; --accent-ink: #052220; --accent-soft: #163b38;
+  --due: #f2a65e; --due-soft: #3a2914; --good: #7fc983; --good-soft: #1b3420; --bad: #e88d8d; --bad-soft: #3b1f20;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+a { color: var(--accent); }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.05rem; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.topbar .wrap { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-block: 10px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand h1 { font-size: 1.3rem; }
+.brand span { color: var(--muted); font-size: 0.85rem; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; }
+.tab { border: 0; background: transparent; padding: 7px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); }
+.tab:hover { color: var(--ink); }
+
+main.wrap { padding-block: 24px 64px; display: grid; gap: 28px; }
+.banner { background: var(--due-soft); color: var(--ink); border-radius: var(--radius); padding: 10px 14px; font-size: 0.9rem; }
+.section { display: grid; gap: 12px; min-width: 0; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.section-head p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.eyebrow { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); padding: 7px 12px; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 0.9rem; text-decoration: none; color: var(--ink); }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+.btn.danger { color: var(--bad); }
+.btn.small { padding: 4px 9px; font-size: 0.82rem; }
+.btn[disabled] { opacity: 0.55; cursor: default; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* Today header */
+.today { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+.today h2 { font-size: 1.6rem; }
+.target { display: grid; gap: 10px; }
+.meter { height: 10px; background: var(--sunk); border-radius: 99px; overflow: hidden; }
+.meter > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.counts { display: flex; gap: 22px; flex-wrap: wrap; }
+.count b { display: block; font-family: var(--font-mono); font-size: 1.4rem; font-weight: 500; }
+.count span { font-size: 0.8rem; color: var(--muted); }
+.streak { display: grid; gap: 6px; align-content: start; }
+.days { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 4px; }
+.day { height: 22px; border-radius: 4px; background: var(--sunk); }
+.day.on { background: var(--accent); }
+.day.today { box-shadow: inset 0 0 0 2px var(--ink); }
+.loop { font-size: 0.85rem; color: var(--muted); }
+.loop b { color: var(--ink); font-weight: 600; }
+
+/* Lead lists */
+.list { display: grid; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.item { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) auto; gap: 12px; align-items: center; padding: 11px 14px; border-top: 1px solid var(--line); }
+.item:first-child { border-top: 0; }
+.item .who { min-width: 0; cursor: pointer; }
+.item .who b { font-weight: 600; }
+.item .who div { font-size: 0.85rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .meta { font-size: 0.85rem; color: var(--muted); min-width: 0; }
+.item .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.empty { padding: 18px 16px; color: var(--muted); font-size: 0.92rem; background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.78rem; font-weight: 600; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.pill.s-contacted, .pill.s-followed { background: var(--accent-soft); color: var(--accent); }
+.pill.s-talking, .pill.s-meeting { background: var(--good-soft); color: var(--good); }
+.pill.s-won { background: var(--good); color: var(--surface); }
+.pill.s-closed { background: var(--sunk); color: var(--muted); text-decoration: line-through; }
+.pill.due { background: var(--due-soft); color: var(--due); }
+.pill.kind { background: transparent; border: 1px solid var(--line); font-weight: 500; }
+
+/* Find */
+.niches { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.niche { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.niche p { margin: 0; font-size: 0.9rem; color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; gap: 6px; }
+.links a { font-size: 0.82rem; padding: 4px 9px; border-radius: 6px; background: var(--sunk); text-decoration: none; color: var(--ink); }
+.links a:hover { background: var(--accent-soft); }
+.pains { margin: 0; padding-left: 18px; font-size: 0.88rem; display: grid; gap: 2px; }
+.pains b { font-weight: 600; }
+
+/* Pipeline */
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.filters input[type="search"] { flex: 1 1 180px; min-width: 0; }
+input, select, textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; width: 100%; }
+.filters select, .filters input { width: auto; }
+textarea { resize: vertical; min-height: 70px; line-height: 1.45; }
+label { display: grid; gap: 4px; font-size: 0.82rem; color: var(--muted); font-weight: 500; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.span2 { grid-column: 1 / -1; }
+
+/* Review */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.stat b { display: block; font-family: var(--font-mono); font-size: 1.5rem; font-weight: 500; }
+.stat span { font-size: 0.8rem; color: var(--muted); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; min-width: 0; }
+.chart { width: 100%; height: auto; display: block; max-height: 260px; }
+.legend { display: flex; gap: 14px; font-size: 0.8rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.log { display: grid; gap: 0; font-size: 0.88rem; }
+.log div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.log div:first-child { border-top: 0; }
+
+/* Sheet */
+.scrim { position: fixed; inset: 0; background: rgb(0 0 0 / 0.35); z-index: 20; }
+.sheet { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--bg); z-index: 21; overflow-y: auto; border-left: 1px solid var(--line);
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)) 18px; display: grid; gap: 18px; align-content: start; }
+.sheet-head { display: flex; gap: 10px; align-items: flex-start; }
+.sheet-head > div { flex: 1; min-width: 0; }
+.stages { display: flex; flex-wrap: wrap; gap: 4px; }
+.stages button { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 3px 10px; font-size: 0.8rem; cursor: pointer; }
+.stages button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: grid; gap: 10px; }
+.lint { display: flex; flex-wrap: wrap; gap: 6px; }
+.lint span { font-size: 0.78rem; padding: 2px 8px; border-radius: 6px; }
+.lint .ok { background: var(--good-soft); color: var(--good); }
+.lint .warn { background: var(--due-soft); color: var(--due); }
+.hist { display: grid; gap: 8px; font-size: 0.86rem; }
+.hist div { border-left: 2px solid var(--line); padding-left: 10px; }
+.hist pre { white-space: pre-wrap; font-family: var(--font-body); margin: 4px 0 0; color: var(--muted); }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--bad-soft); padding: 8px 10px; border-radius: 8px; font-size: 0.88rem; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 8px; z-index: 30; font-size: 0.9rem; max-width: calc(100% - 32px); }
+.loading { padding: 40px 0; color: var(--muted); }
+
+@media (max-width: 700px) {
+  .today { grid-template-columns: minmax(0, 1fr); }
+  .item { grid-template-columns: minmax(0, 1fr) auto; }
+  .item .meta { grid-column: 1 / -1; grid-row: 2; }
+  .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .niches { grid-template-columns: minmax(0, 1fr); }
+  .two { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><h1>Prospect Desk</h1><span id="mode-note"></span></div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" data-tab="today" id="tab-today">Today</button>
+      <button class="tab" role="tab" data-tab="find" id="tab-find">Find</button>
+      <button class="tab" role="tab" data-tab="pipeline" id="tab-pipeline">Pipeline</button>
+      <button class="tab" role="tab" data-tab="review" id="tab-review">Look back</button>
+      <button class="tab" role="tab" data-tab="setup" id="tab-setup">Setup</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="view"><div class="loading">Loading your prospects…</div></main>
+<div id="sheet-root"></div>
+<div id="toast-root"></div>
+
+<script>
+"use strict";
+
+// ---------- Reference data ----------
+
+const STAGES = [
+  { key: "found", client: "Found", job: "Saved" },
+  { key: "researched", client: "Researched", job: "Researched" },
+  { key: "contacted", client: "Messaged", job: "Applied" },
+  { key: "followed", client: "Followed up", job: "Followed up" },
+  { key: "talking", client: "Replied", job: "Replied" },
+  { key: "meeting", client: "Call booked", job: "Interview" },
+  { key: "won", client: "Client won", job: "Offer" },
+  { key: "closed", client: "Closed", job: "Closed" },
+];
+const OPEN_STAGES = ["found", "researched", "contacted", "followed", "talking", "meeting"];
+const REPLIED_STAGES = ["talking", "meeting", "won"];
+const CLOSE_REASONS = ["No reply", "Not hiring", "Rejected", "Not a fit", "Went quiet after rates"];
+const CHANNELS = ["LinkedIn", "Facebook", "Facebook group", "Instagram", "Threads", "Upwork", "OnlineJobs.ph", "Job board", "Referral", "Other"];
+const WHERE = { "LinkedIn": "profile", "Facebook": "page", "Facebook group": "post in the group", "Instagram": "page", "Threads": "posts", "Upwork": "post", "OnlineJobs.ph": "post", "Job board": "post", "Referral": "business", "Other": "page" };
+
+// Section 4 of the post: name the problem, then the help you give for it.
+const PROBLEMS = [
+  { key: "tracking", label: "Tracking work by hand across sheets or boards", offer: "a live status view so nothing slips through", service: "ops and tracking support" },
+  { key: "chasing", label: "Chasing people for deadlines and replies", offer: "follow-ups and reminders drafted for you to approve", service: "follow-up support" },
+  { key: "inbox", label: "Inbox is a mess", offer: "organizing your inbox and handling routine replies", service: "inbox support" },
+  { key: "admin", label: "Hours lost to repeat admin", offer: "automating the repeat steps so they run on their own", service: "admin automation" },
+  { key: "payments", label: "Invoices and payouts tracked manually", offer: "invoice and payout tracking with reminders", service: "payment tracking support" },
+  { key: "briefs", label: "Briefs and messages written from scratch each time", offer: "reusable briefs and AI-drafted messages you review before sending", service: "brief and messaging support" },
+];
+const problem = (k) => PROBLEMS.find((p) => p.key === k);
+
+const DEFAULT_PROFILE = {
+  name: "Tessa",
+  pitch: "I run creator and project operations and build the tools that take the repetitive work out of it: live Monday.com status views, Claude-drafted messages with a human review step, and Apps Script automations.",
+  proof: "built a live Monday.com digest my 4-person team uses daily, plus tools that draft creator briefs and track payment cycles",
+  portfolio: "tessaolea.vercel.app",
+  dailyTarget: 5,
+  followUpDays: 4,
+  niches: [
+    { id: "ugc", kind: "client", name: "UGC & influencer agencies", who: "creator and UGC agencies", keywords: "UGC agency founder", tags: "ugcagency, influencermarketingagency", pains: ["tracking", "chasing", "payments", "briefs"] },
+    { id: "agency", kind: "client", name: "Small agencies & coaches", who: "agency owners and coaches", keywords: "agency owner operations", tags: "agencyowner, businesscoach", pains: ["tracking", "admin", "inbox"] },
+    { id: "dtc", kind: "client", name: "Shopify brands with creator programs", who: "Shopify brands working with creators", keywords: "Shopify brand founder UGC creators", tags: "shopifystore, ugccreators", pains: ["briefs", "chasing", "payments"] },
+    { id: "roles", kind: "job", name: "Full-time: AI ops & creative ops", who: "teams hiring for operations", keywords: "AI operations specialist, creative operations coordinator, automation specialist, project coordinator", tags: "", pains: ["tracking", "admin"] },
+  ],
+};
+
+// ---------- Small helpers ----------
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const enc = encodeURIComponent;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const nowISO = () => new Date().toISOString();
+const dayKey = (d) => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+const todayKey = () => dayKey(new Date());
+const addDays = (n, from = new Date()) => { const d = new Date(from); d.setDate(d.getDate() + n); return dayKey(d); };
+const fmtDay = (k) => k ? new Date(k + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+const fmtWhen = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+const firstName = (s) => (s || "").trim().split(/\s+/)[0] || "";
+const stageLabel = (lead, key = lead.stage) => { const s = STAGES.find((x) => x.key === key); return s ? s[lead.kind === "job" ? "job" : "client"] : key; };
+const pct = (a, b) => b ? Math.round((a / b) * 100) + "%" : "–";
+
+function toast(msg) {
+  const root = $("#toast-root");
+  root.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`;
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => { root.innerHTML = ""; }, 2600);
+}
+
+// ---------- Storage: artifact db when available, this browser otherwise ----------
+
+const state = { leads: new Map(), profile: structuredClone(DEFAULT_PROFILE), mode: "loading", tab: "today", filters: { kind: "all", stage: "open", niche: "all", q: "" } };
+const caps = { db: null, sample: null, downloads: null };
+const LS_KEY = "prospect-desk:v1";
+
+function loadLocal() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+    for (const l of Object.values(raw.leads || {})) state.leads.set(l.id, l);
+    if (raw.profile) state.profile = { ...DEFAULT_PROFILE, ...raw.profile };
+  } catch (e) { /* storage blocked: start empty */ }
+}
+function persistLocal() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ leads: Object.fromEntries(state.leads), profile: state.profile })); }
+  catch (e) { toast("This browser blocked saving. Export a backup from Setup."); }
+}
+
+const writeQueues = new Map();
+function queued(id, fn) {
+  const p = (writeQueues.get(id) || Promise.resolve()).then(fn, fn);
+  writeQueues.set(id, p.catch(() => {}));
+  return p;
+}
+function reportWrite(e) {
+  const code = e && e.code;
+  if (code === "quota_exceeded") toast("Storage is full. Delete old closed prospects in Pipeline.");
+  else if (code === "invalid_argument") toast("You can view this desk but not edit it.");
+  else toast("Couldn't save. Check your connection and try again.");
+}
+
+async function saveLead(lead) {
+  lead.updatedAt = nowISO();
+  state.leads.set(lead.id, lead);
+  render();
+  if (state.mode === "db") {
+    const body = JSON.parse(JSON.stringify(lead));
+    return queued(lead.id, () => caps.db.doc("leads/" + lead.id).set(body)).catch(reportWrite);
+  }
+  persistLocal();
+}
+async function deleteLead(id) {
+  state.leads.delete(id);
+  render();
+  if (state.mode === "db") return queued(id, () => caps.db.doc("leads/" + id).delete()).catch(reportWrite);
+  persistLocal();
+}
+async function saveProfile(p) {
+  state.profile = p;
+  render();
+  if (state.mode === "db") return queued("profile", () => caps.db.doc("settings/profile").set(JSON.parse(JSON.stringify(p)))).catch(reportWrite);
+  persistLocal();
+}
+
+async function boot() {
+  const claude = window.claude;
+  if (claude && typeof claude.use === "function") {
+    const [db, sample, downloads] = await Promise.all([
+      claude.use("db").catch(() => null),
+      claude.use("sample").catch(() => null),
+      claude.use("downloads").catch(() => null),
+    ]);
+    Object.assign(caps, { db, sample, downloads });
+  }
+  if (caps.db) {
+    state.mode = "db";
+    caps.db.collection("leads").onSnapshot((snap) => {
+      state.leads = new Map(snap.docs.map((d) => [d.id, { ...d.data(), id: d.id }]));
+      render();
+    }, () => { $("#mode-note").textContent = "offline, reload to reconnect"; });
+    caps.db.doc("settings/profile").onSnapshot((snap) => {
+      if (snap.exists) state.profile = { ...DEFAULT_PROFILE, ...snap.data() };
+      render();
+    }, () => {});
+  } else {
+    state.mode = "local";
+    loadLocal();
+  }
+  render();
+}
+
+// ---------- Lead model ----------
+
+function newLead(over = {}) {
+  const t = nowISO();
+  return {
+    id: uid(), kind: "client", contact: "", company: "", role: "", url: "", niche: state.profile.niches[0]?.id || "",
+    channel: "LinkedIn", location: "", observation: "", problem: "", notes: "", stage: "found", closeReason: "",
+    followUps: 0, nextFollowUp: "", createdAt: t, updatedAt: t, history: [{ at: t, type: "stage", stage: "found" }], ...over,
+  };
+}
+function pushHistory(lead, entry) {
+  lead.history = [...(lead.history || []), { at: nowISO(), ...entry }].slice(-60);
+}
+function setStage(lead, stage, extra = {}) {
+  if (lead.stage === stage) return;
+  lead.stage = stage;
+  if (stage === "closed" || stage === "won" || REPLIED_STAGES.includes(stage)) lead.nextFollowUp = "";
+  pushHistory(lead, { type: "stage", stage, ...extra });
+}
+function markSent(lead, text) {
+  const isFollow = ["contacted", "followed"].includes(lead.stage);
+  const next = isFollow ? "followed" : REPLIED_STAGES.includes(lead.stage) ? lead.stage : "contacted";
+  if (isFollow) lead.followUps = (lead.followUps || 0) + 1;
+  lead.stage = next;
+  // One follow-up, then a week of grace before the post's advice applies: move on.
+  lead.nextFollowUp = REPLIED_STAGES.includes(next) ? "" : addDays(isFollow ? 7 : Number(state.profile.followUpDays) || 4);
+  pushHistory(lead, { type: "sent", stage: next, text: (text || "").slice(0, 1200) });
+}
+const isDue = (l) => ["contacted", "followed"].includes(l.stage) && l.nextFollowUp && l.nextFollowUp <= todayKey();
+const nicheOf = (l) => state.profile.niches.find((n) => n.id === l.niche);
+const firstAt = (l, pred) => (l.history || []).find(pred)?.at;
+const contactedAt = (l) => firstAt(l, (h) => h.type === "sent" || h.stage === "contacted");
+const repliedAt = (l) => firstAt(l, (h) => REPLIED_STAGES.includes(h.stage));
+
+// ---------- Messages ----------
+
+function templateFor(lead, type) {
+  const p = state.profile;
+  const n = nicheOf(lead);
+  const pr = problem(lead.problem);
+  const name = firstName(lead.contact) || "[name]";
+  const obs = lead.observation ? lead.observation.trim().replace(/[.\s]+$/, "") : "[what you noticed about their business]";
+  if (lead.kind === "job") {
+    if (type === "follow") return `Hi ${name}, following up on my application for the ${lead.role || "[role]"} role. Still very interested. Happy to walk you through how I ${p.proof.split(",")[0]}.`;
+    return `Hi ${name}, I saw the ${lead.role || "[role]"} role at ${lead.company || "[company]"}. ${lead.observation ? obs.charAt(0).toUpperCase() + obs.slice(1) + ". " : ""}In my current role I ${p.proof}. I'd like to do the same for your team. Portfolio: ${p.portfolio}`;
+  }
+  if (type === "follow") return `Hey ${name}! Just wanted to circle back on my previous message. Totally understand if you're busy, just wanted to see if ${pr ? pr.service : "some extra support"} is something you're currently considering.`;
+  return `Hi ${name}! I came across your ${WHERE[lead.channel] || "page"} while looking at ${n ? n.who : "businesses like yours"} and noticed ${obs}. I help ${n ? n.who : "teams like yours"} with ${pr ? pr.offer : "[the problem you can solve]"}, so I thought I'd reach out in case you're looking for some extra help.`;
+}
+
+// The post's rules for a first message, as checks.
+function lint(text, lead) {
+  const t = (text || "").trim();
+  if (!t) return [];
+  const words = t.split(/\s+/).length;
+  const services = (t.match(/\b(admin|social media|lead gen\w*|crm|email management|data entry|scheduling|bookkeeping|graphic|customer service|research)\b/gi) || []).length;
+  const out = [];
+  out.push(words <= 80 ? ["ok", `${words} words`] : ["warn", `${words} words. Start a conversation, not a thesis`]);
+  const fn = firstName(lead.contact);
+  out.push(fn && t.toLowerCase().includes(fn.toLowerCase()) ? ["ok", "Uses their name"] : ["warn", "Add their name"]);
+  out.push(/\[[^\]]+\]/.test(t) ? ["warn", "Fill the [brackets]"] : ["ok", "No blanks left"]);
+  if (/hi dear|are you looking for a va|i'?m a virtual assistant/i.test(t)) out.push(["warn", "Generic opener"]);
+  if (/^(?:(?:hi|hello|hey)\b[^.!?\n]{0,25}[.!?,]?\s*)?I(?:'m| am| help| offer)\b/i.test(t)) out.push(["warn", "Opens about you, not them"]);
+  if (services >= 3) out.push(["warn", "Listing every service. Pick one tied to their problem"]);
+  return out;
+}
+
+function claudePrompt(lead, type) {
+  const p = state.profile;
+  const n = nicheOf(lead);
+  const pr = problem(lead.problem);
+  const ask = lead.kind === "job"
+    ? (type === "follow" ? "a short follow-up on a job application" : "a short note to send with a job application (or to the hiring manager)")
+    : (type === "follow" ? "a short follow-up to a cold message that got no reply" : "a first cold outreach message (DM or email)");
+  return `Write ${ask}.
+
+Rules:
+- Under 70 words. Plain, warm, natural. No subject line, no sign-off block, no emoji, no em dashes.
+- Open with them, not me. Mention the specific thing I noticed about their business.
+- Name one problem and the one kind of help I give for it. Never list services.
+- No "Hi dear", no "Are you looking for a VA?", no resume recap.
+- Follow-ups: no pressure, no guilt, easy to say no.
+- If a detail is missing, write around it. Never invent facts about them or me.
+
+About me: ${p.pitch}
+Proof: I ${p.proof}. Portfolio: ${p.portfolio}
+
+Them:
+- Name: ${lead.contact || "unknown"}
+- Business: ${lead.company || "unknown"}${lead.role ? `\n- Role they're hiring for: ${lead.role}` : ""}
+- Niche: ${n ? n.who : "unknown"}
+- Where I found them: ${lead.channel}
+- What I noticed: ${lead.observation || "nothing noted"}
+- Problem I can solve: ${pr ? pr.label + " → " + pr.offer : "not chosen"}
+- My notes: ${lead.notes || "none"}
+
+Reply with only the message text.`;
+}
+
+// ---------- Search links (section 2 of the post: go where they are) ----------
+
+function searchLinks(n) {
+  const kw = (n.keywords || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const main = kw[0] || n.who;
+  if (n.kind === "job") {
+    return kw.flatMap((k) => [
+      [`LinkedIn Jobs: ${k}`, `https://www.linkedin.com/jobs/search/?keywords=${enc(k)}&f_WT=2&sortBy=DD`],
+    ]).concat([
+      ["OnlineJobs.ph", `https://www.onlinejobs.ph/jobseekers/jobsearch?jobkeyword=${enc(main)}`],
+      ["Upwork", `https://www.upwork.com/nx/search/jobs/?q=${enc(main)}&sort=recency`],
+      ["We Work Remotely", `https://weworkremotely.com/remote-jobs/search?term=${enc(main)}`],
+      ["LinkedIn posts: \"hiring\"", `https://www.linkedin.com/search/results/content/?keywords=${enc(main + " hiring")}&sortBy=%22date_posted%22`],
+      ["Google Jobs", `https://www.google.com/search?q=${enc(main + " remote")}&ibp=htl;jobs`],
+    ]);
+  }
+  const tags = (n.tags || "").split(",").map((s) => s.trim().replace(/^#/, "")).filter(Boolean);
+  return [
+    ["LinkedIn people", `https://www.linkedin.com/search/results/people/?keywords=${enc(main)}`],
+    ["LinkedIn posts", `https://www.linkedin.com/search/results/content/?keywords=${enc(main)}&sortBy=%22date_posted%22`],
+    ["Facebook groups", `https://www.facebook.com/search/groups/?q=${enc(n.who)}`],
+    ["Facebook posts", `https://www.facebook.com/search/posts/?q=${enc(main)}`],
+    ["Threads", `https://www.threads.net/search?q=${enc(main)}`],
+    ...tags.map((t) => [`Instagram #${t}`, `https://www.instagram.com/explore/tags/${enc(t)}/`]),
+    ["Google: LinkedIn profiles", `https://www.google.com/search?q=${enc(`site:linkedin.com/in "${main}"`)}`],
+  ];
+}
+
+// ---------- Views ----------
+
+function render() {
+  if (state.mode === "loading") return;
+  document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
+  $("#mode-note").textContent = state.mode === "db" ? "" : "saved in this browser";
+  const v = $("#view");
+  const banner = state.mode === "local" ? `<div class="banner">Prospects are saved in this browser only. Export a backup from Setup now and then.</div>` : "";
+  v.innerHTML = banner + ({ today: viewToday, find: viewFind, pipeline: viewPipeline, review: viewReview, setup: viewSetup }[state.tab])();
+}
+
+function leadRow(l, acts = "") {
+  const n = nicheOf(l);
+  const due = isDue(l) ? `<span class="pill due">Follow-up due</span>` : l.nextFollowUp && OPEN_STAGES.includes(l.stage) ? `<span class="muted">Follow up ${fmtDay(l.nextFollowUp)}</span>` : "";
+  return `<div class="item">
+    <div class="who" data-open="${esc(l.id)}" role="button" tabindex="0"><b>${esc(l.contact || l.company || "Unnamed")}</b>
+      <div>${esc([l.kind === "job" ? l.role : "", l.company && l.contact ? l.company : "", n?.name].filter(Boolean).join(" · "))}</div></div>
+    <div class="meta"><span class="pill s-${esc(l.stage)}">${esc(stageLabel(l))}</span> ${due} <span class="muted">${esc(l.channel)}</span></div>
+    <div class="acts">${acts}<button class="btn small" data-open="${esc(l.id)}">Open</button></div>
+  </div>`;
+}
+const listOrEmpty = (items, empty, acts) => items.length ? `<div class="list">${items.map((l) => leadRow(l, acts ? acts(l) : "")).join("")}</div>` : `<div class="empty">${empty}</div>`;
+
+function streakDays() {
+  const active = new Set();
+  for (const l of state.leads.values()) for (const h of l.history || []) if (h.type === "sent" || (h.type === "stage" && h.stage === "found")) active.add(dayKey(h.at));
+  return Array.from({ length: 14 }, (_, i) => { const k = addDays(i - 13); return { k, on: active.has(k) }; });
+}
+
+function viewToday() {
+  const leads = [...state.leads.values()];
+  const tk = todayKey();
+  const foundToday = leads.filter((l) => dayKey(l.createdAt) === tk).length;
+  const sentToday = leads.reduce((a, l) => a + (l.history || []).filter((h) => h.type === "sent" && dayKey(h.at) === tk).length, 0);
+  const target = Number(state.profile.dailyTarget) || 5;
+  const due = leads.filter(isDue).sort((a, b) => a.nextFollowUp.localeCompare(b.nextFollowUp));
+  const ready = leads.filter((l) => l.stage === "researched");
+  const fresh = leads.filter((l) => l.stage === "found");
+  const replies = leads.filter((l) => ["talking", "meeting"].includes(l.stage));
+  const waiting = leads.filter((l) => ["contacted", "followed"].includes(l.stage) && !isDue(l)).sort((a, b) => String(a.nextFollowUp).localeCompare(String(b.nextFollowUp)));
+  const days = streakDays();
+  const date = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
+  return `
+  <section class="today">
+    <div class="target">
+      <span class="eyebrow">${esc(date)}</span>
+      <h2>${foundToday >= target ? "Today's finding is done." : `Find ${target - foundToday} more ${target - foundToday === 1 ? "prospect" : "prospects"} today.`}</h2>
+      <div class="meter" aria-label="${foundToday} of ${target} found"><i style="width:${Math.min(100, (foundToday / target) * 100)}%"></i></div>
+      <div class="counts">
+        <div class="count"><b>${foundToday}/${target}</b><span>found today</span></div>
+        <div class="count"><b>${sentToday}</b><span>messages sent</span></div>
+        <div class="count"><b>${due.length}</b><span>follow-ups due</span></div>
+        <div class="count"><b>${replies.length}</b><span>in conversation</span></div>
+      </div>
+      <div class="row"><button class="btn primary" data-new="client">Add a prospect</button><button class="btn" data-new="job">Add a job</button><button class="btn ghost" data-tab="find">Open search links</button></div>
+    </div>
+    <div class="streak">
+      <span class="eyebrow">Last 14 days of outreach</span>
+      <div class="days">${days.map((d) => `<div class="day${d.on ? " on" : ""}${d.k === tk ? " today" : ""}" title="${esc(fmtDay(d.k))}"></div>`).join("")}</div>
+      <p class="loop"><b>Find</b> → <b>Research</b> → <b>Personalize</b> → <b>Message</b> → <b>Follow up</b>. One niche, every day, then adjust from Look back.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h3>Follow up now</h3><p>They didn't say no. They may have forgotten.</p></div>
+    ${listOrEmpty(due, "No follow-ups due. Messages you send get a follow-up date automatically.", (l) => (l.followUps || 0) >= 1 ? `<button class="btn small" data-close="${esc(l.id)}">Move on</button>` : "")}
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h3>Replied, your move</h3><p>Answer fast while they're warm.</p></div>
+    ${listOrEmpty(replies, "No open conversations yet. Replies show up here once you mark a prospect as Replied.")}
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h3>Researched, ready to message</h3><p>You know their problem. Write the message.</p></div>
+    ${listOrEmpty(ready, "Nothing waiting. Open a found prospect, note what you noticed, and mark it Researched.")}
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h3>Found, needs research</h3><p>Look at their business before you write anything.</p></div>
+    ${listOrEmpty(fresh, "No new prospects. Use the Find tab to search where your niche hangs out, then add who you find.")}
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h3>Waiting on a reply</h3><p>Leave these alone until their follow-up date.</p></div>
+    ${listOrEmpty(waiting, "No messages out yet.")}
+  </section>`;
+}
+
+function viewFind() {
+  const p = state.profile;
+  return `
+  <section class="section">
+    <div class="section-head"><h2>Go where they are</h2><p>Each link opens a search in a new tab. Add the people worth a message.</p></div>
+    <div class="niches">${p.niches.map((n) => `
+      <article class="niche">
+        <div class="row" style="justify-content:space-between"><h3>${esc(n.name)}</h3><span class="pill kind">${n.kind === "job" ? "Full-time" : "Clients"}</span></div>
+        <p>${esc(n.who)}</p>
+        <div class="links">${searchLinks(n).map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join("")}</div>
+        ${(n.pains || []).length ? `<div><span class="eyebrow">Look for these problems</span><ul class="pains">${n.pains.map((k) => problem(k)).filter(Boolean).map((pr) => `<li><b>${esc(pr.label)}</b>: you offer ${esc(pr.offer)}</li>`).join("")}</ul></div>` : ""}
+        <div class="row"><button class="btn primary small" data-new="${esc(n.kind)}" data-niche="${esc(n.id)}">Add someone from this search</button></div>
+      </article>`).join("")}
+    </div>
+    <p class="muted" style="font-size:.85rem">Edit niches, search keywords and Instagram hashtags in Setup. Facebook and Instagram searches need you signed in.</p>
+  </section>`;
+}
+
+function filteredLeads() {
+  const f = state.filters;
+  const q = f.q.trim().toLowerCase();
+  return [...state.leads.values()].filter((l) =>
+    (f.kind === "all" || l.kind === f.kind) &&
+    (f.niche === "all" || l.niche === f.niche) &&
+    (f.stage === "all" || (f.stage === "open" ? OPEN_STAGES.includes(l.stage) : l.stage === f.stage)) &&
+    (!q || [l.contact, l.company, l.role, l.notes, l.observation].join(" ").toLowerCase().includes(q))
+  ).sort((a, b) => (isDue(b) - isDue(a)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+}
+
+function viewPipeline() {
+  const f = state.filters;
+  const rows = filteredLeads();
+  const opt = (v, t, cur) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(t)}</option>`;
+  return `
+  <section class="section">
+    <div class="section-head"><h2>Pipeline</h2><div class="row"><button class="btn primary" data-new="client">Add a prospect</button><button class="btn" data-new="job">Add a job</button></div></div>
+    <div class="filters">
+      <input type="search" id="f-q" placeholder="Search name, business, notes" value="${esc(f.q)}" aria-label="Search">
+      <select id="f-kind" aria-label="Type">${opt("all", "Clients and jobs", f.kind)}${opt("client", "Clients", f.kind)}${opt("job", "Jobs", f.kind)}</select>
+      <select id="f-stage" aria-label="Stage">${opt("open", "Open", f.stage)}${opt("all", "All stages", f.stage)}${STAGES.map((s) => opt(s.key, s.client + (s.client !== s.job ? " / " + s.job : ""), f.stage)).join("")}</select>
+      <select id="f-niche" aria-label="Niche">${opt("all", "All niches", f.niche)}${state.profile.niches.map((n) => opt(n.id, n.name, f.niche)).join("")}</select>
+    </div>
+    <p class="muted" style="margin:0;font-size:.85rem">${rows.length} of ${state.leads.size}</p>
+    ${listOrEmpty(rows, state.leads.size ? "Nothing matches these filters." : "Your pipeline is empty. Add the first business you found today, even before you research it.")}
+  </section>`;
+}
+
+function weekStart(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+
+function viewReview() {
+  const leads = [...state.leads.values()];
+  const contacted = leads.filter(contactedAt);
+  const replied = leads.filter(repliedAt);
+  const meetings = leads.filter((l) => (l.history || []).some((h) => h.stage === "meeting" || h.stage === "won"));
+  const won = leads.filter((l) => l.stage === "won");
+  const sentTotal = leads.reduce((a, l) => a + (l.history || []).filter((h) => h.type === "sent").length, 0);
+
+  // Weekly outreach vs replies, last 8 weeks.
+  const ws = weekStart(new Date());
+  const weeks = Array.from({ length: 8 }, (_, i) => { const d = new Date(ws); d.setDate(d.getDate() - (7 - i) * 7); return { start: d, sent: 0, replies: 0 }; });
+  const bucket = (iso) => { if (!iso) return null; const t = new Date(iso).getTime(); for (let i = weeks.length - 1; i >= 0; i--) if (t >= weeks[i].start.getTime()) return weeks[i]; return null; };
+  for (const l of leads) {
+    for (const h of l.history || []) if (h.type === "sent") { const b = bucket(h.at); if (b) b.sent++; }
+    const r = bucket(repliedAt(l)); if (r) r.replies++;
+  }
+  const max = Math.max(4, ...weeks.map((w) => Math.max(w.sent, w.replies)));
+  const W = 900, H = 220, padL = 28, padB = 26, padT = 10, cw = (W - padL) / weeks.length, bw = Math.min(18, cw / 3);
+  const y = (v) => H - padB - ((H - padB - padT) * v) / max;
+  const ticks = [0, Math.round(max / 2), max];
+  const chart = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Messages sent and replies per week, last 8 weeks">
+    ${ticks.map((t) => `<line x1="${padL}" x2="${W}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${padL - 6}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${t}</text>`).join("")}
+    ${weeks.map((w, i) => { const x = padL + i * cw + cw / 2; return `
+      <rect x="${x - bw - 1}" y="${y(w.sent)}" width="${bw}" height="${Math.max(0, H - padB - y(w.sent))}" fill="var(--accent)" rx="2"><title>${w.sent} sent</title></rect>
+      <rect x="${x + 1}" y="${y(w.replies)}" width="${bw}" height="${Math.max(0, H - padB - y(w.replies))}" fill="var(--good)" rx="2"><title>${w.replies} replies</title></rect>
+      <text x="${x}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--muted)">${esc(w.start.toLocaleDateString(undefined, { month: "short", day: "numeric" }))}</text>`; }).join("")}
+  </svg>`;
+
+  const breakdown = (keyFn, labelFn) => {
+    const m = new Map();
+    for (const l of leads) {
+      const k = keyFn(l); if (!m.has(k)) m.set(k, { found: 0, contacted: 0, replied: 0, won: 0 });
+      const r = m.get(k); r.found++; if (contactedAt(l)) r.contacted++; if (repliedAt(l)) r.replied++; if (l.stage === "won") r.won++;
+    }
+    const rows = [...m.entries()].sort((a, b) => b[1].contacted - a[1].contacted);
+    if (!rows.length) return `<p class="muted">Nothing yet.</p>`;
+    return `<div class="tablewrap"><table><thead><tr><th></th><th class="num">Found</th><th class="num">Messaged</th><th class="num">Replied</th><th class="num">Reply rate</th><th class="num">Won</th></tr></thead><tbody>
+      ${rows.map(([k, r]) => `<tr><td>${esc(labelFn(k))}</td><td class="num">${r.found}</td><td class="num">${r.contacted}</td><td class="num">${r.replied}</td><td class="num">${pct(r.replied, r.contacted)}</td><td class="num">${r.won}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  };
+  const reasons = new Map();
+  for (const l of leads) if (l.stage === "closed") reasons.set(l.closeReason || "No reason", (reasons.get(l.closeReason || "No reason") || 0) + 1);
+
+  const log = leads.flatMap((l) => (l.history || []).map((h) => ({ ...h, l }))).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40);
+
+  return `
+  <section class="section">
+    <div class="section-head"><h2>Look back</h2><p>Some reply, most won't. Watch which niche and channel answer, then lean into them.</p></div>
+    <div class="stats">
+      <div class="stat"><b>${leads.length}</b><span>prospects found</span></div>
+      <div class="stat"><b>${sentTotal}</b><span>messages sent</span></div>
+      <div class="stat"><b>${pct(replied.length, contacted.length)}</b><span>reply rate (${replied.length} of ${contacted.length})</span></div>
+      <div class="stat"><b>${meetings.length}</b><span>calls or interviews</span></div>
+      <div class="stat"><b>${won.length}</b><span>clients or offers won</span></div>
+    </div>
+  </section>
+  <section class="panel section">
+    <div class="section-head"><h3>Weekly outreach</h3><div class="legend"><span><i style="background:var(--accent)"></i>Messages sent</span><span><i style="background:var(--good)"></i>First replies</span></div></div>
+    ${chart}
+  </section>
+  <div class="two">
+    <section class="panel section"><h3>By niche</h3>${breakdown((l) => l.niche || "", (k) => state.profile.niches.find((n) => n.id === k)?.name || "No niche")}</section>
+    <section class="panel section"><h3>By channel</h3>${breakdown((l) => l.channel || "Other", (k) => k)}</section>
+  </div>
+  <div class="two">
+    <section class="panel section"><h3>Why prospects closed</h3>${reasons.size ? `<div class="tablewrap"><table><tbody>${[...reasons].sort((a, b) => b[1] - a[1]).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">Nothing closed yet.</p>`}</section>
+    <section class="panel section"><h3>Recent activity</h3>${log.length ? `<div class="log">${log.map((h) => `<div><span class="muted mono">${esc(fmtWhen(h.at))}</span><span>${h.type === "sent" ? "Sent a message to" : esc(stageLabel(h.l, h.stage)) + ":"} <a href="#" data-open="${esc(h.l.id)}">${esc(h.l.contact || h.l.company || "Unnamed")}</a></span></div>`).join("")}</div>` : `<p class="muted">Your outreach history will build up here.</p>`}</section>
+  </div>`;
+}
+
+function viewSetup() {
+  const p = state.profile;
+  const painBoxes = (n, i) => PROBLEMS.map((pr) => `<label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" style="width:auto" id="n${i}-p-${pr.key}" data-pain="${pr.key}"${(n.pains || []).includes(pr.key) ? " checked" : ""}>${esc(pr.label)}</label>`).join("");
+  return `
+  <form class="section" id="profile-form">
+    <div class="section-head"><h2>Setup</h2><p>Used in templates and Claude drafts.</p></div>
+    <div class="box grid2">
+      <label>Your first name<input id="p-name" value="${esc(p.name)}"></label>
+      <label>Portfolio link<input id="p-portfolio" value="${esc(p.portfolio)}"></label>
+      <label class="span2">What you do, in one or two sentences<textarea id="p-pitch">${esc(p.pitch)}</textarea></label>
+      <label class="span2">Proof: finish the sentence "I…"<textarea id="p-proof">${esc(p.proof)}</textarea></label>
+      <label>New prospects per day<input id="p-target" type="number" min="1" max="50" value="${esc(p.dailyTarget)}"></label>
+      <label>Days before first follow-up<input id="p-follow" type="number" min="1" max="21" value="${esc(p.followUpDays)}"></label>
+    </div>
+    <div class="section-head"><h3>Niches</h3><p>The post's advice: pick one and go deep. Keep a few here to compare in Look back.</p></div>
+    ${p.niches.map((n, i) => `
+      <fieldset class="box grid2" data-niche-i="${i}" style="margin:0">
+        <label>Niche name<input id="n${i}-name" value="${esc(n.name)}"></label>
+        <label>Type<select id="n${i}-kind"><option value="client"${n.kind !== "job" ? " selected" : ""}>Clients</option><option value="job"${n.kind === "job" ? " selected" : ""}>Full-time jobs</option></select></label>
+        <label class="span2">Who they are (used in messages: "while looking at …")<input id="n${i}-who" value="${esc(n.who)}"></label>
+        <label class="span2">Search keywords (comma separated; jobs get one link per keyword)<input id="n${i}-keywords" value="${esc(n.keywords)}"></label>
+        <label class="span2">Instagram hashtags (comma separated)<input id="n${i}-tags" value="${esc(n.tags)}"></label>
+        <div class="span2" style="display:grid;gap:4px"><span class="eyebrow">Problems to look for</span>${painBoxes(n, i)}</div>
+        <div class="span2"><button type="button" class="btn small danger" data-remove-niche="${i}">Remove niche</button></div>
+      </fieldset>`).join("")}
+    <div class="row"><button type="button" class="btn" id="add-niche">Add a niche</button><button type="submit" class="btn primary">Save setup</button></div>
+  </form>
+  <section class="section">
+    <div class="section-head"><h3>Backup</h3><p>${state.mode === "db" ? "Your prospects are saved with this page. Export a copy whenever you like." : "Saved in this browser only. Export often."}</p></div>
+    <div class="row"><button class="btn" id="export-csv">Export CSV</button><button class="btn" id="export-json">Export backup (JSON)</button>
+    <label class="btn" style="display:inline-flex">Import backup<input type="file" id="import-json" accept="application/json,.json" hidden></label></div>
+  </section>`;
+}
+
+function readSetupForm() {
+  const p = { ...state.profile };
+  p.name = $("#p-name").value.trim();
+  p.portfolio = $("#p-portfolio").value.trim();
+  p.pitch = $("#p-pitch").value.trim();
+  p.proof = $("#p-proof").value.trim().replace(/^I\s+/i, "");
+  p.dailyTarget = Math.max(1, Number($("#p-target").value) || 5);
+  p.followUpDays = Math.max(1, Number($("#p-follow").value) || 4);
+  p.niches = [...document.querySelectorAll("[data-niche-i]")].map((fs) => {
+    const i = fs.dataset.nicheI;
+    const old = state.profile.niches[i] || {};
+    return {
+      id: old.id || uid(), name: $(`#n${i}-name`).value.trim() || "Untitled niche", kind: $(`#n${i}-kind`).value,
+      who: $(`#n${i}-who`).value.trim(), keywords: $(`#n${i}-keywords`).value.trim(), tags: $(`#n${i}-tags`).value.trim(),
+      pains: [...fs.querySelectorAll("[data-pain]:checked")].map((c) => c.dataset.pain),
+    };
+  });
+  return p;
+}
+
+// ---------- Prospect sheet ----------
+
+const sheet = { lead: null, isNew: false, confirmDelete: false, closing: false, ctl: null };
+
+function openSheet(lead, isNew = false) {
+  Object.assign(sheet, { lead: structuredClone(lead), isNew, confirmDelete: false, closing: false });
+  renderSheet();
+  setTimeout(() => $("#s-contact")?.focus(), 0);
+}
+function closeSheet() { sheet.ctl?.abort(); sheet.lead = null; $("#sheet-root").innerHTML = ""; }
+
+function renderSheet() {
+  const l = sheet.lead;
+  if (!l) return;
+  const job = l.kind === "job";
+  const opt = (v, t, cur) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(t)}</option>`;
+  const msgType = ["contacted", "followed"].includes(l.stage) ? "follow" : "first";
+  $("#sheet-root").innerHTML = `
+  <div class="scrim" data-sheet-close></div>
+  <aside class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-head">
+      <div><span class="eyebrow">${sheet.isNew ? (job ? "New job" : "New prospect") : (job ? "Job" : "Prospect")}</span>
+        <h2 id="sheet-title">${esc(l.contact || l.company || (job ? "New job" : "New prospect"))}</h2></div>
+      <button class="btn ghost" data-sheet-close aria-label="Close">Close</button>
+    </div>
+
+    ${sheet.isNew ? "" : `<div class="box">
+      <span class="eyebrow">Stage</span>
+      <div class="stages">${STAGES.map((s) => `<button type="button" data-stage="${s.key}" aria-pressed="${l.stage === s.key}">${esc(s[job ? "job" : "client"])}</button>`).join("")}</div>
+      ${sheet.closing ? `<div class="row"><select id="s-reason" style="width:auto">${CLOSE_REASONS.map((r) => opt(r, r, "")).join("")}</select><button class="btn small primary" id="s-close-confirm">Close it</button><button class="btn small ghost" id="s-close-cancel">Cancel</button></div>` : ""}
+      ${l.stage === "closed" && l.closeReason ? `<span class="muted" style="font-size:.85rem">Closed: ${esc(l.closeReason)}</span>` : ""}
+    </div>`}
+
+    <form class="box grid2" id="lead-form">
+      <label>Type<select id="s-kind">${opt("client", "Client prospect", l.kind)}${opt("job", "Job application", l.kind)}</select></label>
+      <label>Niche<select id="s-niche">${state.profile.niches.map((n) => opt(n.id, n.name, l.niche)).join("")}${opt("", "No niche", l.niche)}</select></label>
+      <label>${job ? "Hiring manager or recruiter" : "Contact name"}<input id="s-contact" value="${esc(l.contact)}" placeholder="Sarah Lopez"></label>
+      <label>${job ? "Company" : "Business"}<input id="s-company" value="${esc(l.company)}"></label>
+      ${job ? `<label class="span2">Role<input id="s-role" value="${esc(l.role)}" placeholder="AI Operations Specialist"></label>` : ""}
+      <label>Found on<select id="s-channel">${CHANNELS.map((c) => opt(c, c, l.channel)).join("")}</select></label>
+      <label>Location<input id="s-location" value="${esc(l.location)}" placeholder="Florida, US"></label>
+      <label class="span2">Link (profile, page or job post)<input id="s-url" type="url" value="${esc(l.url)}" placeholder="https://">${l.url ? `<a href="${esc(l.url)}" target="_blank" rel="noopener" style="font-size:.82rem">Open link</a>` : ""}</label>
+      <label class="span2">What you noticed about their business<textarea id="s-observation" placeholder="${job ? "They're scaling the creator team and the post mentions messy tracking" : "Posts listings daily but their Instagram hasn't been updated in 3 weeks"}">${esc(l.observation)}</textarea></label>
+      <label class="span2">The problem you can solve<select id="s-problem">${opt("", "Pick one", l.problem)}${PROBLEMS.map((p) => opt(p.key, p.label, l.problem)).join("")}</select></label>
+      <label class="span2">Notes<textarea id="s-notes">${esc(l.notes)}</textarea></label>
+      ${sheet.isNew ? "" : `<label>Next follow-up<input id="s-next" type="date" value="${esc(l.nextFollowUp)}"></label>`}
+      <div class="span2 row"><button type="submit" class="btn primary">${sheet.isNew ? "Add to pipeline" : "Save changes"}</button>${sheet.isNew ? `<button type="button" class="btn" id="s-add-researched">Add as researched</button>` : ""}</div>
+    </form>
+
+    ${sheet.isNew ? "" : `
+    <div class="box">
+      <div class="row" style="justify-content:space-between"><span class="eyebrow">Message</span>
+        <select id="m-type" style="width:auto">${opt("first", job ? "Application note" : "First message", msgType)}${opt("follow", "Follow-up", msgType)}</select></div>
+      <textarea id="m-text" rows="6" placeholder="Fill the template or ask Claude for a draft, then edit it in your own voice."></textarea>
+      <div class="lint" id="m-lint"></div>
+      <div class="row">
+        <button class="btn" id="m-template" type="button">Fill template</button>
+        ${caps.sample ? `<button class="btn" id="m-claude" type="button">Draft with Claude</button><button class="btn ghost" id="m-stop" type="button" hidden>Stop</button>` : ""}
+        <button class="btn" id="m-copy" type="button">Copy</button>
+        <button class="btn primary" id="m-sent" type="button">Mark as sent</button>
+      </div>
+      <span class="muted" id="m-status" style="font-size:.82rem">Mark as sent after you send it yourself. That sets the follow-up date.</span>
+    </div>
+
+    <div class="box"><span class="eyebrow">History</span>
+      <div class="hist">${[...(l.history || [])].reverse().map((h) => `<div><span class="mono muted">${esc(fmtWhen(h.at))}</span> ${h.type === "sent" ? "Message sent" : esc(stageLabel(l, h.stage))}${h.reason ? ` · ${esc(h.reason)}` : ""}${h.text ? `<pre>${esc(h.text)}</pre>` : ""}</div>`).join("")}</div>
+    </div>
+
+    <div>${sheet.confirmDelete
+      ? `<div class="confirm">Delete this ${job ? "job" : "prospect"} and its history? <button class="btn small danger" id="s-delete-yes">Delete</button><button class="btn small ghost" id="s-delete-no">Keep</button></div>`
+      : `<button class="btn small danger" id="s-delete">Delete</button>`}</div>`}
+  </aside>`;
+  $("#m-text") && $("#m-text").addEventListener("input", updateLint);
+}
+
+function readLeadForm() {
+  const l = sheet.lead;
+  const v = (id) => ($("#" + id)?.value ?? "").trim();
+  Object.assign(l, {
+    kind: v("s-kind"), niche: v("s-niche"), contact: v("s-contact"), company: v("s-company"), role: $("#s-role") ? v("s-role") : l.role,
+    channel: v("s-channel"), location: v("s-location"), url: v("s-url"), observation: v("s-observation"), problem: v("s-problem"), notes: v("s-notes"),
+  });
+  if ($("#s-next")) l.nextFollowUp = v("s-next");
+  return l;
+}
+
+function updateLint() {
+  const el = $("#m-lint");
+  if (!el) return;
+  el.innerHTML = lint($("#m-text").value, readLeadForm()).map(([k, t]) => `<span class="${k}">${esc(t)}</span>`).join("");
+}
+
+const SAMPLE_ERRORS = {
+  rate_limited: "Claude is busy or your usage limit is reached. Try again later.",
+  refused: "Claude declined this one. Change the details and try again.",
+  session_expired: "Sign in to Claude again, then retry.",
+  empty_completion: "Claude returned nothing. Add more detail and retry.",
+};
+
+async function draftWithClaude() {
+  const l = readLeadForm();
+  const out = $("#m-text"), btn = $("#m-claude"), stop = $("#m-stop"), status = $("#m-status");
+  sheet.ctl?.abort();
+  const ctl = (sheet.ctl = new AbortController());
+  btn.disabled = true; stop.hidden = false; status.textContent = "Thinking…";
+  try {
+    const { text } = await caps.sample(claudePrompt(l, $("#m-type").value), {
+      modelTier: "quick", cache: false, signal: ctl.signal,
+      onText: ({ text }) => { out.value = text; status.textContent = "Writing…"; },
+    });
+    out.value = text.trim();
+    status.textContent = "Draft ready. Edit it so it sounds like you.";
+  } catch (e) {
+    if (e?.text && e.code !== "refused") out.value = e.text;
+    if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(e?.code)) {
+      btn.remove(); stop.remove(); status.textContent = "Claude drafting is off for this view. Use the template.";
+      caps.sample = null; return;
+    }
+    status.textContent = e?.code === "cancelled" ? "Stopped." : SAMPLE_ERRORS[e?.code] || "Couldn't reach Claude. Try again.";
+  } finally {
+    if (btn.isConnected) btn.disabled = false;
+    if (stop.isConnected) stop.hidden = true;
+  }
+  updateLint();
+}
+
+async function copyText(text, statusEl) {
+  try { await navigator.clipboard.writeText(text); statusEl.textContent = "Copied. Paste it into the DM or email."; }
+  catch (e) { const t = $("#m-text"); t.focus(); t.select(); statusEl.textContent = "Text selected. Press Ctrl+C or ⌘C to copy."; }
+}
+
+// ---------- Export / import ----------
+
+function toCSV() {
+  const cols = ["kind", "contact", "company", "role", "niche", "channel", "location", "url", "stage", "closeReason", "problem", "observation", "notes", "followUps", "nextFollowUp", "createdAt", "updatedAt"];
+  const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  return [cols.join(","), ...[...state.leads.values()].map((l) => cols.map((c) => cell(c === "niche" ? nicheOf(l)?.name || "" : c === "stage" ? stageLabel(l) : l[c])).join(","))].join("\n");
+}
+async function offerFile(filename, data, type) {
+  if (caps.downloads) {
+    try { await caps.downloads.save({ filename, data }); toast("Saved " + filename); }
+    catch (e) { if (e?.code !== "declined") toast("Couldn't save the file."); }
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([data], { type }));
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+async function importBackup(file) {
+  try {
+    const data = JSON.parse(await file.text());
+    const leads = Array.isArray(data.leads) ? data.leads : Object.values(data.leads || {});
+    let n = 0;
+    for (const l of leads) if (l && l.id && !state.leads.has(l.id)) { await saveLead({ ...newLead(), ...l }); n++; }
+    if (data.profile) await saveProfile({ ...DEFAULT_PROFILE, ...data.profile });
+    toast(`Imported ${n} new ${n === 1 ? "entry" : "entries"}.`);
+  } catch (e) { toast("That file isn't a Prospect Desk backup."); }
+}
+
+// ---------- Events ----------
+
+document.addEventListener("click", async (ev) => {
+  const t = ev.target.closest("button, [data-open], [data-sheet-close], a[href='#']");
+  if (!t) return;
+  const d = t.dataset;
+
+  if (d.tab) { state.tab = d.tab; render(); window.scrollTo(0, 0); return; }
+  if (d.open) { ev.preventDefault(); const l = state.leads.get(d.open); if (l) openSheet(l); return; }
+  if (d.new) { openSheet(newLead({ kind: d.new, niche: d.niche || state.profile.niches.find((n) => n.kind === d.new)?.id || "" }), true); return; }
+  if (d.close) { const l = structuredClone(state.leads.get(d.close)); l.closeReason = "No reply"; setStage(l, "closed", { reason: "No reply" }); await saveLead(l); toast("Closed. On to the next one."); return; }
+  if ("sheetClose" in d) { closeSheet(); return; }
+
+  // Setup
+  if (t.id === "add-niche") { const p = readSetupForm(); p.niches.push({ id: uid(), kind: "client", name: "New niche", who: "", keywords: "", tags: "", pains: [] }); state.profile = p; render(); return; }
+  if (d.removeNiche) { const p = readSetupForm(); p.niches.splice(Number(d.removeNiche), 1); state.profile = p; render(); toast("Removed. Save setup to keep the change."); return; }
+  if (t.id === "export-csv") return offerFile(`prospects-${todayKey()}.csv`, toCSV(), "text/csv");
+  if (t.id === "export-json") return offerFile(`prospect-desk-backup-${todayKey()}.json`, JSON.stringify({ leads: [...state.leads.values()], profile: state.profile }, null, 2), "application/json");
+
+  // Sheet
+  const l = sheet.lead;
+  if (!l) return;
+  if (d.stage) {
+    readLeadForm();
+    if (d.stage === "closed") { sheet.closing = true; renderSheet(); return; }
+    setStage(l, d.stage);
+    await saveLead(structuredClone(l)); renderSheet(); return;
+  }
+  if (t.id === "s-close-cancel") { sheet.closing = false; renderSheet(); return; }
+  if (t.id === "s-close-confirm") { readLeadForm(); const r = $("#s-reason").value; l.closeReason = r; setStage(l, "closed", { reason: r }); sheet.closing = false; await saveLead(structuredClone(l)); renderSheet(); return; }
+  if (t.id === "s-add-researched") { readLeadForm(); l.stage = "researched"; l.history = [{ at: nowISO(), type: "stage", stage: "researched" }]; await saveLead(structuredClone(l)); sheet.isNew = false; renderSheet(); toast("Added. Write the message below."); return; }
+  if (t.id === "m-template") { $("#m-text").value = templateFor(readLeadForm(), $("#m-type").value); updateLint(); return; }
+  if (t.id === "m-claude") return draftWithClaude();
+  if (t.id === "m-stop") { sheet.ctl?.abort(); return; }
+  if (t.id === "m-copy") return copyText($("#m-text").value, $("#m-status"));
+  if (t.id === "m-sent") {
+    const text = $("#m-text").value.trim();
+    readLeadForm(); markSent(l, text);
+    await saveLead(structuredClone(l)); renderSheet();
+    $("#m-status").textContent = l.nextFollowUp ? `Logged. Follow-up due ${fmtDay(l.nextFollowUp)}.` : "Logged.";
+    return;
+  }
+  if (t.id === "s-delete") { sheet.confirmDelete = true; renderSheet(); return; }
+  if (t.id === "s-delete-no") { sheet.confirmDelete = false; renderSheet(); return; }
+  if (t.id === "s-delete-yes") { const id = l.id; closeSheet(); await deleteLead(id); toast("Deleted."); return; }
+});
+
+document.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  if (ev.target.id === "profile-form") { await saveProfile(readSetupForm()); toast("Setup saved."); return; }
+  if (ev.target.id === "lead-form" && sheet.lead) {
+    const l = readLeadForm();
+    if (!l.contact && !l.company) { toast("Add a name or a business first."); $("#s-contact").focus(); return; }
+    const wasNew = sheet.isNew;
+    if (l.observation && l.stage === "found") setStage(l, "researched");
+    await saveLead(structuredClone(l));
+    sheet.isNew = false;
+    renderSheet();
+    toast(wasNew ? "Added to your pipeline." : "Saved.");
+  }
+});
+
+document.addEventListener("input", (ev) => {
+  const id = ev.target.id;
+  if (id === "f-q") { state.filters.q = ev.target.value; const pos = ev.target.selectionStart; render(); const q = $("#f-q"); q.focus(); q.setSelectionRange(pos, pos); }
+});
+document.addEventListener("change", (ev) => {
+  const id = ev.target.id;
+  if (id === "f-kind") { state.filters.kind = ev.target.value; render(); }
+  if (id === "f-stage") { state.filters.stage = ev.target.value; render(); }
+  if (id === "f-niche") { state.filters.niche = ev.target.value; render(); }
+  if (id === "s-kind" && sheet.lead) { readLeadForm(); renderSheet(); }
+  if (id === "m-type") updateLint();
+  if (id === "import-json" && ev.target.files[0]) importBackup(ev.target.files[0]);
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && sheet.lead) closeSheet();
+  if (ev.key === "Enter" && ev.target.matches?.(".who[data-open]")) ev.target.click();
+});
+
+boot();
+</script>
